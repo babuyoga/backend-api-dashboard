@@ -22,6 +22,7 @@ if not TEST_MODE:
     connection_string = (
         f"mssql+pyodbc://{DB_USER}:{DB_PASSWORD}"
         f"@{DB_HOST}/{DB_NAME}?driver={DB_DRIVER.replace(' ', '+')}"
+        "&TrustServerCertificate=yes"
     )
 
     # Create SQLAlchemy engine with connection pooling

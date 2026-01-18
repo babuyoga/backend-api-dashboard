@@ -9,7 +9,7 @@ run_forecast_pipeline_json function from the original Streamlit app.
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models.schemas import ForecastComparisonRequest
+from app.models.schemas import ForecastComparisonRequest, ProjectSummaryRequest
 from app.services.sql_queries import query_batch_to_df
 
 
@@ -17,7 +17,8 @@ from app.services.data_processor import (
     combine_projects_rows,
     table_to_nested_json,
     compute_forecast_diff,
-    hand_crafted_summary
+    hand_crafted_summary,
+    preprocess_df_collapse_projects
 )
 
 
@@ -25,7 +26,7 @@ from app.config import projects_list, metric_map
 import tempfile
 import json
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 router = APIRouter()
 
@@ -148,3 +149,40 @@ def get_project_summary(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/overall-summary")
+def get_overall_summary(
+    request: ProjectSummaryRequest,
+    db: Session = Depends(get_db)
+) -> List[Dict[str, Any]]:
+    """
+    Get a collapsed project summary for a specific period.
+    
+    Arguments:
+        request: Contains period and metric
+        db: Database session
+        
+    Returns:
+        List of dictionaries with collapsed project data
+    """
+    try:
+        # Fetch data
+        df = query_batch_to_df(db, request.period)
+        
+        if df.empty:
+             raise HTTPException(
+                status_code=404,
+                detail=f"No data found for period {request.period}"
+            )
+            
+        # Collapse projects
+        summary_df = preprocess_df_collapse_projects(df, request.metric)
+        
+        # Convert to list of dicts
+        return summary_df.to_dict(orient="records")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Summary generation failed: {str(e)}")

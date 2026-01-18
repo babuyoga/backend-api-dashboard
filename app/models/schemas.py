@@ -79,6 +79,19 @@ class ForecastComparisonRequest(BaseModel):
     metric: str = Field(..., pattern="^(forecast_costs_at_completion|ytd_actual)$")
 
 
+
 class ForecastComparisonResponse(BaseModel):
     """Response containing analysis for all matching projects."""
     projects: Dict[str, ProjectAnalysis]
+
+
+class ProjectSummaryRequest(BaseModel):
+    """
+    Request body for the overall project summary endpoint.
+    
+    Attributes:
+        period: Period to analyze in YYYYMM format
+        metric: Metric to summarize (e.g., 'forecast_costs_at_completion')
+    """
+    period: str = Field(..., pattern=r"^\d{6}$", description="Format: YYYYMM")
+    metric: str = Field(..., pattern="^(forecast_costs_at_completion|ytd_actual)$")
